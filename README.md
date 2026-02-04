@@ -49,4 +49,4 @@ This project is built with:
 - **Admin Dashboard**: Manage vehicles, approve drivers, and view analytics.
 - **Fleet Manager Dashboard**: Monitor fleet status and schedule maintenance.
 - **Driver Dashboard**: View assigned vehicle, navigation, and trip history.
-- **Customer Dashboard**: Book rides, view trip history, and rate drivers.
+- **Customer Dashboard**: Book rides, view trip history, and rate drivers. 
