@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Zap,
@@ -14,6 +14,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth, getRoleDashboardPath } from '@/contexts/AuthContext';
 
 const features = [
   {
@@ -46,6 +47,13 @@ const stats = [
 ];
 
 export default function Landing() {
+  const { user, isAuthenticated } = useAuth();
+
+  // If user is already logged in, redirect to their dashboard
+  if (isAuthenticated && user) {
+    return <Navigate to={getRoleDashboardPath(user.role)} replace />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -152,7 +160,12 @@ export default function Landing() {
                     <Map className="h-10 w-10 text-primary-foreground" />
                   </div>
                   <p className="text-xl font-semibold">Live Fleet Dashboard</p>
-                  <p className="text-muted-foreground">Login to access the interactive map</p>
+                  <p className="text-muted-foreground mb-4">Login to access the interactive map and real-time fleet data.</p>
+                  <Link to="/login">
+                    <Button variant="default" size="lg">
+                      Login Now
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </div>

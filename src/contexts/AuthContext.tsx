@@ -22,48 +22,6 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo
-const MOCK_USERS: Record<string, User & { password: string }> = {
-  'admin@neurofleetx.com': {
-    id: '1',
-    email: 'admin@neurofleetx.com',
-    password: 'admin123',
-    name: 'Alex Administrator',
-    role: 'ADMIN',
-    phone: '+1 555-0100',
-    createdAt: new Date('2024-01-01'),
-  },
-  'manager@neurofleetx.com': {
-    id: '2',
-    email: 'manager@neurofleetx.com',
-    password: 'manager123',
-    name: 'Morgan Fleet',
-    role: 'FLEET_MANAGER',
-    phone: '+1 555-0101',
-    createdAt: new Date('2024-01-15'),
-  },
-  'driver@neurofleetx.com': {
-    id: '3',
-    email: 'driver@neurofleetx.com',
-    password: 'driver123',
-    name: 'Derek Driver',
-    role: 'DRIVER',
-    phone: '+1 555-0102',
-    licenseNumber: 'DL-2024-001',
-    approvalStatus: 'APPROVED',
-    createdAt: new Date('2024-02-01'),
-  },
-  'customer@neurofleetx.com': {
-    id: '4',
-    email: 'customer@neurofleetx.com',
-    password: 'customer123',
-    name: 'Casey Customer',
-    role: 'CUSTOMER',
-    phone: '+1 555-0103',
-    createdAt: new Date('2024-02-15'),
-  },
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('neurofleetx_user');
@@ -74,65 +32,107 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const mockUser = MOCK_USERS[email.toLowerCase()];
-    
-    if (!mockUser || mockUser.password !== password) {
-      setIsLoading(false);
-      throw new Error('Invalid email or password');
-    }
+    try {
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    // Check driver approval status
-    if (mockUser.role === 'DRIVER' && mockUser.approvalStatus !== 'APPROVED') {
-      setIsLoading(false);
-      throw new Error('Your driver account is pending approval');
-    }
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        data = {};
+      }
 
-    const { password: _, ...userWithoutPassword } = mockUser;
-    setUser(userWithoutPassword);
-    localStorage.setItem('neurofleetx_user', JSON.stringify(userWithoutPassword));
-    setIsLoading(false);
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed. Please check your credentials.');
+      }
+
+      // Check driver approval status from response
+      if (data.roles.includes('DRIVER') && data.approvalStatus !== 'APPROVED') {
+        throw new Error('Your driver account is pending approval');
+      }
+
+      const userRole = data.roles[0] as UserRole; // Assuming single role
+
+      const user: User = {
+        id: data.id.toString(),
+        email: data.email,
+        name: data.name,
+        role: userRole,
+        approvalStatus: data.approvalStatus,
+        createdAt: new Date(), // Backend doesn't return this yet in JwtResponse, using current time
+      };
+
+      setUser(user);
+      localStorage.setItem('neurofleetx_user', JSON.stringify(user));
+      localStorage.setItem('neurofleetx_token', data.token);
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const register = useCallback(async (data: RegisterData) => {
     setIsLoading(true);
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (MOCK_USERS[data.email.toLowerCase()]) {
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Registration failed');
+      }
+
+      // For drivers, they need approval before login
+      if (data.role === 'DRIVER') {
+        // Don't log them in, show message about pending approval
+        throw new Error('PENDING_APPROVAL');
+      }
+
+      // Auto login after registration for non-drivers? 
+      // Current flow seems to expect login after register or auto-login.
+      // Let's just return success and let the user login or auto-login.
+      // The original mock implementation did:
+      // setUser(newUser); localStorage.setItem...
+      
+      // Since backend doesn't return token on signup, we can either:
+      // 1. Call login immediately
+      // 2. Redirect to login page
+      
+      // I'll call login immediately to match the previous behavior
+      await login(data.email, data.password);
+
+    } catch (error: any) {
+      // If error is PENDING_APPROVAL, rethrow it to be handled by the component
+      if (error.message === 'PENDING_APPROVAL') {
+        throw error;
+      }
+      console.error("Registration error:", error);
+      throw error;
+    } finally {
       setIsLoading(false);
-      throw new Error('Email already exists');
     }
-
-    const newUser: User = {
-      id: `user_${Date.now()}`,
-      email: data.email,
-      name: data.name,
-      role: data.role,
-      phone: data.phone,
-      licenseNumber: data.licenseNumber,
-      approvalStatus: data.role === 'DRIVER' ? 'PENDING' : undefined,
-      createdAt: new Date(),
-    };
-
-    // For drivers, they need approval before login
-    if (data.role === 'DRIVER') {
-      setIsLoading(false);
-      // Don't log them in, show message about pending approval
-      throw new Error('PENDING_APPROVAL');
-    }
-
-    setUser(newUser);
-    localStorage.setItem('neurofleetx_user', JSON.stringify(newUser));
-    setIsLoading(false);
-  }, []);
+  }, [login]);
 
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('neurofleetx_user');
+    localStorage.removeItem('neurofleetx_token');
   }, []);
 
   const updateUser = useCallback((updatedUser: User) => {

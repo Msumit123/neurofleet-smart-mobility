@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Zap, ArrowRight, Car, Bike, User, Shield } from 'lucide-react';
+import { Eye, EyeOff, Zap, ArrowRight, Car, Bike, User, Shield, Briefcase, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 const roleOptions: { value: UserRole; label: string; icon: typeof User; description: string }[] = [
   { value: 'CUSTOMER', label: 'Customer', icon: User, description: 'Book rides and track vehicles' },
   { value: 'DRIVER', label: 'Driver', icon: Car, description: 'Drive and earn (requires approval)' },
+  { value: 'FLEET_MANAGER', label: 'Fleet Manager', icon: Briefcase, description: 'Manage vehicles and maintenance' },
+  { value: 'ADMIN', label: 'Admin', icon: Crown, description: 'Full system access (Demo)' },
 ];
 
 export default function Register() {
