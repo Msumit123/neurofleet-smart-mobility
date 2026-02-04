@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Telemetry, Vehicle } from '@/types';
-import { mockTelemetry as initialTelemetry } from '@/data/mockData';
 
 interface UseLiveTelemetryOptions {
   vehicles: Vehicle[];
@@ -91,25 +90,39 @@ export function useLiveTelemetry({
   updateInterval = 1000,
   enabled = true 
 }: UseLiveTelemetryOptions) {
-  const [telemetry, setTelemetry] = useState<Record<string, TelemetryWithAnimation>>(() => {
-    // Initialize with animation properties
-    const initial: Record<string, TelemetryWithAnimation> = {};
-    for (const key in initialTelemetry) {
-      initial[key] = {
-        ...initialTelemetry[key],
-        prevLatitude: initialTelemetry[key].latitude,
-        prevLongitude: initialTelemetry[key].longitude,
-        animationProgress: 1,
-      };
-    }
-    return initial;
-  });
+  const [telemetry, setTelemetry] = useState<Record<string, TelemetryWithAnimation>>({});
   
   const vehicleMapRef = useRef<Map<string, Vehicle>>(new Map());
   
-  // Keep vehicle map updated
+  // Keep vehicle map updated and initialize telemetry for new vehicles
   useEffect(() => {
     vehicleMapRef.current = new Map(vehicles.map(v => [v.id, v]));
+
+    setTelemetry(prev => {
+      const next = { ...prev };
+      let hasChanges = false;
+      
+      vehicles.forEach(v => {
+        if (!next[v.id] && v.latitude !== undefined && v.longitude !== undefined) {
+          hasChanges = true;
+          next[v.id] = {
+            vehicleId: v.id,
+            latitude: v.latitude,
+            longitude: v.longitude,
+            speed: 0,
+            heading: 0,
+            fuelLevel: 100,
+            engineStatus: v.status === 'IN_USE' ? 'ON' : 'OFF',
+            timestamp: new Date(),
+            prevLatitude: v.latitude,
+            prevLongitude: v.longitude,
+            animationProgress: 1,
+          };
+        }
+      });
+      
+      return hasChanges ? next : prev;
+    });
   }, [vehicles]);
   
   // Telemetry update loop

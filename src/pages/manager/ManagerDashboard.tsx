@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Car, Map, Wrench, AlertTriangle, CheckCircle, Filter } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -8,24 +8,43 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useLiveTelemetry } from '@/hooks/useLiveTelemetry';
-import { mockVehicles, mockMaintenanceRecords, mockDashboardStats } from '@/data/mockData';
-import { VehicleStatus } from '@/types';
+import { getAllVehicles } from '@/lib/api';
+import { Vehicle, VehicleStatus } from '@/types';
 
 export default function ManagerDashboard() {
   const [selectedVehicle, setSelectedVehicle] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'ALL'>('ALL');
-  const { telemetry } = useLiveTelemetry({ vehicles: mockVehicles });
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const { telemetry } = useLiveTelemetry({ vehicles });
+
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const data = await getAllVehicles();
+        setVehicles(data);
+      } catch (e) {
+        console.error("Failed to fetch vehicles", e);
+      }
+    };
+    fetchVehicles();
+    
+    // Poll for updates
+    const interval = setInterval(fetchVehicles, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const filteredVehicles = statusFilter === 'ALL'
-    ? mockVehicles
-    : mockVehicles.filter(v => v.status === statusFilter);
+    ? vehicles
+    : vehicles.filter(v => v.status === statusFilter);
 
   const vehiclesByStatus = {
-    available: mockVehicles.filter(v => v.status === 'AVAILABLE').length,
-    inUse: mockVehicles.filter(v => v.status === 'IN_USE').length,
-    needsService: mockVehicles.filter(v => v.status === 'NEEDS_SERVICE').length,
-    offline: mockVehicles.filter(v => v.status === 'OFFLINE').length,
+    available: vehicles.filter(v => v.status === 'AVAILABLE').length,
+    inUse: vehicles.filter(v => v.status === 'IN_USE').length,
+    needsService: vehicles.filter(v => v.status === 'NEEDS_SERVICE').length,
+    offline: vehicles.filter(v => v.status === 'OFFLINE').length,
   };
+  
+  const vehiclesNeedingService = vehicles.filter(v => v.status === 'NEEDS_SERVICE');
 
   return (
     <DashboardLayout>
@@ -109,7 +128,7 @@ export default function ManagerDashboard() {
             <CardContent>
               {selectedVehicle ? (
                 (() => {
-                  const vehicle = mockVehicles.find(v => v.id === selectedVehicle);
+                  const vehicle = vehicles.find(v => v.id === selectedVehicle);
                   const vehicleTelemetry = telemetry[selectedVehicle];
                   if (!vehicle) return null;
 
@@ -187,32 +206,32 @@ export default function ManagerDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {mockMaintenanceRecords.map((record, index) => {
-                  const vehicle = mockVehicles.find(v => v.id === record.vehicleId);
-                  return (
+                {vehiclesNeedingService.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">No vehicles requiring service.</p>
+                ) : (
+                    vehiclesNeedingService.map((vehicle, index) => (
                     <motion.div
-                      key={record.id}
+                      key={vehicle.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.1 }}
                       className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-4"
                     >
                       <div>
-                        <p className="font-medium">{vehicle?.name || 'Unknown Vehicle'}</p>
-                        <p className="text-sm text-muted-foreground">{record.description}</p>
+                        <p className="font-medium">{vehicle.name}</p>
+                        <p className="text-sm text-muted-foreground">{vehicle.licensePlate}</p>
                         <p className="text-xs text-muted-foreground">
-                          Scheduled: {record.scheduledDate.toLocaleDateString()}
+                          Status: {vehicle.status.replace('_', ' ')}
                         </p>
                       </div>
                       <div className="text-right">
-                        <Badge variant={record.type === 'REPAIR' ? 'warning' : 'info'}>
-                          {record.type}
+                        <Badge variant="warning">
+                          SERVICE DUE
                         </Badge>
-                        <p className="mt-1 text-sm font-semibold">₹{record.cost}</p>
                       </div>
                     </motion.div>
-                  );
-                })}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

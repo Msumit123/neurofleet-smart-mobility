@@ -27,10 +27,10 @@ public class DataInitializer implements CommandLineRunner {
         
         // Initialize Demo Vehicles if empty
         if (vehicleRepository.count() == 0) {
-            createVehicle("Swift Dzire #001", "KA-01-AB-1234", "CAR", "AVAILABLE");
-            createVehicle("Innova Crysta #002", "KA-01-CD-5678", "VAN", "IN_USE");
-            createVehicle("Ather 450X #003", "KA-01-EF-9012", "BIKE", "AVAILABLE");
-            createVehicle("Bajaj RE #004", "KA-01-GH-3456", "AUTO", "NEEDS_SERVICE");
+            createVehicle("Swift Dzire #001", "KA-01-AB-1234", "CAR", "AVAILABLE", 12.9716, 77.5946);
+            createVehicle("Innova Crysta #002", "KA-01-CD-5678", "VAN", "IN_USE", 12.9800, 77.6000);
+            createVehicle("Ather 450X #003", "KA-01-EF-9012", "BIKE", "AVAILABLE", 12.9600, 77.5800);
+            createVehicle("Bajaj RE #004", "KA-01-GH-3456", "AUTO", "NEEDS_SERVICE", 12.9750, 77.6100);
         }
 
         // Admin
@@ -85,12 +85,14 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("Demo users and vehicles initialized!");
     }
 
-    private void createVehicle(String name, String plate, String type, String status) {
+    private void createVehicle(String name, String plate, String type, String status, Double lat, Double lng) {
         Vehicle v = new Vehicle();
         v.setName(name);
         v.setLicensePlate(plate);
         v.setType(type);
         v.setStatus(status);
+        v.setLatitude(lat);
+        v.setLongitude(lng);
         vehicleRepository.save(v);
     }
 }

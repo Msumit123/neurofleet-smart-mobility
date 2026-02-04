@@ -22,6 +22,9 @@ public class Vehicle {
     private Integer capacity;
     private String fuelType;
 
+    private Double latitude;
+    private Double longitude;
+
     private LocalDateTime lastServiceDate;
     private LocalDateTime nextServiceDue;
 
@@ -57,6 +60,12 @@ public class Vehicle {
 
     public String getFuelType() { return fuelType; }
     public void setFuelType(String fuelType) { this.fuelType = fuelType; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 
     public LocalDateTime getLastServiceDate() { return lastServiceDate; }
     public void setLastServiceDate(LocalDateTime lastServiceDate) { this.lastServiceDate = lastServiceDate; }

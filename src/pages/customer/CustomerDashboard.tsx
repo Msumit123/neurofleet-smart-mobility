@@ -17,38 +17,76 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { mockVehicles } from '@/data/mockData';
+import { getAvailableVehicles, createTrip } from '@/lib/api';
+import { Vehicle } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function CustomerDashboard() {
+  const { user } = useAuth();
   const [pickup, setPickup] = useState('');
   const [destination, setDestination] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [activeBooking, setActiveBooking] = useState<any>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const { toast } = useToast();
 
-  // Mock available vehicles near user
-  const availableVehicles = mockVehicles.filter(v => v.status === 'AVAILABLE').slice(0, 3);
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const data = await getAvailableVehicles();
+        setVehicles(data);
+      } catch (error) {
+        console.error("Failed to fetch vehicles", error);
+        toast({ title: "Error", description: "Could not load available vehicles", variant: "destructive" });
+      }
+    };
+    fetchVehicles();
+  }, []);
+
+  // Use real fetched vehicles
+  const availableVehicles = vehicles.slice(0, 3);
 
   const handleBook = async (vehicleId: string) => {
+    if (!pickup || !destination) {
+        toast({ title: "Error", description: "Please enter pickup and destination", variant: "destructive" });
+        return;
+    }
     setIsSearching(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSearching(false);
-      setActiveBooking({
-        id: Math.random().toString(36).substr(2, 9),
-        vehicleId,
-        pickup,
-        destination,
-        status: 'CONFIRMED',
-        eta: 5,
-        driverName: 'John Doe', // In real app, fetch from vehicle
-        vehicleName: mockVehicles.find(v => v.id === vehicleId)?.name
-      });
-      toast({
-        title: "Ride Booked!",
-        description: "Your driver is on the way.",
-      });
-    }, 1500);
+    
+    try {
+        // Mock geocoding for demo (Real app would use Google Maps API)
+        const pickupLoc = { latitude: 12.9716, longitude: 77.5946, address: pickup };
+        const destLoc = { latitude: 12.9800, longitude: 77.6000, address: destination };
+        
+        const bookingData = {
+            vehicleId,
+            customerId: user?.id,
+            customerName: user?.name,
+            pickup: pickupLoc,
+            destination: destLoc
+        };
+        
+        const trip = await createTrip(bookingData);
+        
+        setIsSearching(false);
+        setActiveBooking({
+            id: trip.id,
+            vehicleId,
+            pickup: pickupLoc.address,
+            destination: destLoc.address,
+            status: 'CONFIRMED',
+            eta: 5,
+            driverName: 'Assigned Driver', // Should come from vehicle/trip
+            vehicleName: vehicles.find(v => v.id === vehicleId)?.name
+        });
+        toast({
+            title: "Ride Booked!",
+            description: "Your driver is on the way.",
+        });
+    } catch (e) {
+        setIsSearching(false);
+        toast({ title: "Error", description: "Booking failed", variant: "destructive" });
+    }
   };
 
   return (
@@ -163,7 +201,7 @@ export default function CustomerDashboard() {
           {/* Map Area */}
           <div className="w-full lg:w-2/3 h-[600px] rounded-xl overflow-hidden border border-border">
              <LiveFleetMap 
-               vehicles={mockVehicles} 
+               vehicles={vehicles} 
                height="100%"
              />
           </div>

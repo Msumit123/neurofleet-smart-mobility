@@ -18,26 +18,46 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { mockVehicles, mockTelemetry, mockTrips, updateTelemetry } from '@/data/mockData';
-import { Telemetry } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { getAssignedVehicle, getActiveTrip } from '@/lib/api';
+import { useLiveTelemetry } from '@/hooks/useLiveTelemetry';
+import { Vehicle, Trip } from '@/types';
 
 export default function DriverDashboard() {
-  // Simulated assigned vehicle and trip
-  const assignedVehicle = mockVehicles.find(v => v.id === 'v2');
-  const currentTrip = mockTrips[0];
-  const [telemetry, setTelemetry] = useState<Telemetry>(mockTelemetry['v2']);
-  const [tripStarted, setTripStarted] = useState(true);
+  const { user } = useAuth();
+  const [assignedVehicle, setAssignedVehicle] = useState<Vehicle | null>(null);
+  const [currentTrip, setCurrentTrip] = useState<any | null>(null);
+  const [tripStarted, setTripStarted] = useState(false);
 
-  // Simulate real-time telemetry updates
+  // Fetch assigned vehicle and trip
   useEffect(() => {
-    if (!tripStarted) return;
-
-    const interval = setInterval(() => {
-      setTelemetry(prev => updateTelemetry(prev));
-    }, 2000);
-
+    const fetchData = async () => {
+        if (!user?.id) return;
+        try {
+            const vehicle = await getAssignedVehicle(user.id);
+            setAssignedVehicle(vehicle);
+            
+            const trip = await getActiveTrip(user.id);
+            setCurrentTrip(trip);
+            if (trip && trip.status === 'IN_PROGRESS') {
+                setTripStarted(true);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+    fetchData();
+    // Poll
+    const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
-  }, [tripStarted]);
+  }, [user?.id]);
+
+  const { telemetry } = useLiveTelemetry({ 
+    vehicles: assignedVehicle ? [assignedVehicle] : [],
+    enabled: true 
+  });
+  
+  const vehicleTelemetry = assignedVehicle ? telemetry[assignedVehicle.id] : null;
 
   if (!assignedVehicle) {
     return (
@@ -88,7 +108,7 @@ export default function DriverDashboard() {
           <CardContent className="p-0">
             <FleetMap
               vehicles={[assignedVehicle]}
-              telemetry={{ [assignedVehicle.id]: telemetry }}
+              telemetry={vehicleTelemetry ? { [assignedVehicle.id]: vehicleTelemetry } : {}}
               showRoute={!!currentTrip}
               route={currentTrip?.route}
               pickup={currentTrip ? { lat: currentTrip.pickup.latitude, lng: currentTrip.pickup.longitude } : undefined}
@@ -117,6 +137,8 @@ export default function DriverDashboard() {
                 <Badge variant="in-use">In Use</Badge>
               </div>
 
+              {vehicleTelemetry && (
+              <>
               {/* Speed */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
@@ -124,10 +146,10 @@ export default function DriverDashboard() {
                     <Gauge className="h-4 w-4" /> Speed
                   </span>
                   <span className="font-mono text-lg font-bold text-primary">
-                    {Math.round(telemetry.speed)} km/h
+                    {Math.round(vehicleTelemetry.speed)} km/h
                   </span>
                 </div>
-                <Progress value={telemetry.speed} max={80} className="h-2" />
+                <Progress value={vehicleTelemetry.speed} max={80} className="h-2" />
               </div>
 
               {/* Fuel */}
@@ -136,23 +158,25 @@ export default function DriverDashboard() {
                   <span className="flex items-center gap-2 text-muted-foreground">
                     <Fuel className="h-4 w-4" /> Fuel Level
                   </span>
-                  <span className={`font-mono text-lg font-bold ${telemetry.fuelLevel < 20 ? 'text-destructive' : 'text-success'}`}>
-                    {Math.round(telemetry.fuelLevel)}%
+                  <span className={`font-mono text-lg font-bold ${vehicleTelemetry.fuelLevel < 20 ? 'text-destructive' : 'text-success'}`}>
+                    {Math.round(vehicleTelemetry.fuelLevel)}%
                   </span>
                 </div>
                 <Progress 
-                  value={telemetry.fuelLevel} 
-                  className={`h-2 ${telemetry.fuelLevel < 20 ? '[&>div]:bg-destructive' : '[&>div]:bg-success'}`} 
+                  value={vehicleTelemetry.fuelLevel} 
+                  className={`h-2 ${vehicleTelemetry.fuelLevel < 20 ? '[&>div]:bg-destructive' : '[&>div]:bg-success'}`} 
                 />
               </div>
 
               {/* Engine Status */}
               <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
                 <span className="text-sm text-muted-foreground">Engine Status</span>
-                <Badge variant={telemetry.engineStatus === 'ON' ? 'success' : 'secondary'}>
-                  {telemetry.engineStatus}
+                <Badge variant={vehicleTelemetry.engineStatus === 'ON' ? 'success' : 'secondary'}>
+                  {vehicleTelemetry.engineStatus}
                 </Badge>
               </div>
+              </>
+              )}
             </CardContent>
           </Card>
 

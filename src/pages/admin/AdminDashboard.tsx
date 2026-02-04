@@ -14,8 +14,8 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import StatCard from '@/components/dashboard/StatCard';
 import LiveFleetMap from '@/components/map/LiveFleetMap';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLiveTelemetry } from '@/hooks/useLiveTelemetry';
-import { mockVehicles } from '@/data/mockData';
+import { getAllVehicles } from '@/lib/api';
+import { Vehicle } from '@/types';
 
 // New interface for API stats
 interface DashboardStats {
@@ -34,7 +34,7 @@ interface DashboardStats {
 
 export default function AdminDashboard() {
   const [selectedVehicle, setSelectedVehicle] = useState<string | undefined>();
-  const { telemetry } = useLiveTelemetry({ vehicles: mockVehicles });
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     totalVehicles: 0,
     activeVehicles: 0,
@@ -49,6 +49,16 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
+    const fetchVehicles = async () => {
+        try {
+            const data = await getAllVehicles();
+            setVehicles(data);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+    fetchVehicles();
+
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem('neurofleetx_token');
@@ -141,6 +151,7 @@ export default function AdminDashboard() {
             subtitle="Customer satisfaction"
             icon={Star}
             variant="success"
+            trend={{ value: 4, isPositive: true }}
           />
           <StatCard
             title="Fleet Utilization"
@@ -162,7 +173,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <LiveFleetMap
-                vehicles={mockVehicles}
+                vehicles={vehicles}
                 selectedVehicleId={selectedVehicle}
                 onVehicleSelect={setSelectedVehicle}
                 height="400px"

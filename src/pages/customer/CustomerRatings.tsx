@@ -14,12 +14,12 @@ export default function CustomerRatings() {
         <Card>
            <CardContent className="pt-6">
              <div className="flex flex-col items-center justify-center space-y-4 py-8">
-               <div className="p-4 bg-yellow-100 rounded-full">
-                 <Star className="h-8 w-8 text-yellow-500" />
+               <div className="p-4 bg-muted rounded-full">
+                 <Star className="h-8 w-8 text-muted-foreground" />
                </div>
-               <h3 className="text-xl font-semibold">4.8 Average Rating</h3>
+               <h3 className="text-xl font-semibold">No Ratings Yet</h3>
                <p className="text-muted-foreground text-center max-w-sm">
-                 You are a 5-star passenger! Keep it up.
+                 Your ratings will appear here after you complete trips.
                </p>
              </div>
            </CardContent>

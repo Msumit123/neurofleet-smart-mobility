@@ -35,6 +35,8 @@ export interface Vehicle {
   lastServiceDate?: Date;
   nextServiceDue?: Date;
   imageUrl?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface Telemetry {
