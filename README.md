@@ -28,7 +28,7 @@ This project is built with:
 
 1.  **Clone the repository**
     ```sh
-    git clone <YOUR_GIT_URL>
+    git clone https://github.com/Msumit123/neurofleet-smart-mobility.git
     ```
 
 2.  **Frontend Setup**
