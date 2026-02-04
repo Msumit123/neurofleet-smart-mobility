@@ -1,5 +1,10 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { User, UserRole, DriverApprovalStatus } from '@/types';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+} from 'react';
+import { User, UserRole } from '@/types';
 
 interface AuthContextType {
   user: User | null;
@@ -22,119 +27,132 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// 🔥 UI ROLE → BACKEND STRING ROLE
+const ROLE_LABEL_MAP: Record<UserRole, string> = {
+  ADMIN: 'Admin',
+  CUSTOMER: 'Customer',
+  DRIVER: 'Driver',
+  FLEET_MANAGER: 'Fleet Manager',
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('neurofleetx_user');
     return saved ? JSON.parse(saved) : null;
   });
+
   const [isLoading, setIsLoading] = useState(false);
 
+  // ================= LOGIN =================
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
-    
+
     try {
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
       const text = await response.text();
-      let data;
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch (e) {
-        data = {};
+      let data: any = {};
+
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = {};
+        }
       }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed. Please check your credentials.');
+        throw new Error(data.message || 'Login failed');
       }
 
-      // Check driver approval status from response
-      if (data.roles.includes('DRIVER') && data.approvalStatus !== 'APPROVED') {
+      // Driver approval check
+      if (
+        data.roles?.includes('ROLE_DRIVER') &&
+        data.approvalStatus !== 'APPROVED'
+      ) {
         throw new Error('Your driver account is pending approval');
       }
 
-      const userRole = data.roles[0] as UserRole; // Assuming single role
-
-      const user: User = {
-        id: data.id.toString(),
+      const loggedUser: User = {
+        id: String(data.id),
         email: data.email,
         name: data.name,
-        role: userRole,
+        role: data.roles[0].replace('ROLE_', '') as UserRole,
         approvalStatus: data.approvalStatus,
-        createdAt: new Date(), // Backend doesn't return this yet in JwtResponse, using current time
+        createdAt: new Date(),
       };
 
-      setUser(user);
-      localStorage.setItem('neurofleetx_user', JSON.stringify(user));
+      setUser(loggedUser);
+      localStorage.setItem('neurofleetx_user', JSON.stringify(loggedUser));
       localStorage.setItem('neurofleetx_token', data.token);
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const register = useCallback(async (data: RegisterData) => {
-    setIsLoading(true);
-    
-    try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+  // ================= REGISTER =================
+  const register = useCallback(
+    async (data: RegisterData) => {
+      setIsLoading(true);
 
-      const responseData = await response.json();
+      try {
+        const payload = {
+          email: data.email,
+          password: data.password,
+          name: data.name,
+          phone: data.phone,
+          licenseNumber: data.licenseNumber,
+          role: ROLE_LABEL_MAP[data.role], // 🔥 IMPORTANT
+        };
 
-      if (!response.ok) {
-        throw new Error(responseData.message || 'Registration failed');
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        // ✅ SAFE RESPONSE HANDLING
+        const text = await response.text();
+        let responseData: any = {};
+
+        if (text) {
+          try {
+            responseData = JSON.parse(text);
+          } catch {
+            responseData = {};
+          }
+        }
+
+        if (!response.ok) {
+          throw new Error(responseData.message || 'Registration failed');
+        }
+
+        // Driver approval flow
+        if (data.role === 'DRIVER') {
+          throw new Error('PENDING_APPROVAL');
+        }
+
+        // Auto login for others
+        await login(data.email, data.password);
+      } finally {
+        setIsLoading(false);
       }
+    },
+    [login]
+  );
 
-      // For drivers, they need approval before login
-      if (data.role === 'DRIVER') {
-        // Don't log them in, show message about pending approval
-        throw new Error('PENDING_APPROVAL');
-      }
-
-      // Auto login after registration for non-drivers? 
-      // Current flow seems to expect login after register or auto-login.
-      // Let's just return success and let the user login or auto-login.
-      // The original mock implementation did:
-      // setUser(newUser); localStorage.setItem...
-      
-      // Since backend doesn't return token on signup, we can either:
-      // 1. Call login immediately
-      // 2. Redirect to login page
-      
-      // I'll call login immediately to match the previous behavior
-      await login(data.email, data.password);
-
-    } catch (error: any) {
-      // If error is PENDING_APPROVAL, rethrow it to be handled by the component
-      if (error.message === 'PENDING_APPROVAL') {
-        throw error;
-      }
-      console.error("Registration error:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [login]);
-
+  // ================= LOGOUT =================
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('neurofleetx_user');
     localStorage.removeItem('neurofleetx_token');
   }, []);
 
+  // ================= UPDATE USER =================
   const updateUser = useCallback((updatedUser: User) => {
     setUser(updatedUser);
     localStorage.setItem('neurofleetx_user', JSON.stringify(updatedUser));
@@ -157,15 +175,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ================= HOOK =================
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
 }
 
-// Role-based route helper
+// ================= ROLE ROUTES =================
 export function getRoleDashboardPath(role: UserRole): string {
   switch (role) {
     case 'ADMIN':

@@ -8,6 +8,8 @@ import java.util.Optional;
 
 @Repository
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
+
     Optional<Vehicle> findByAssignedDriverId(Long assignedDriverId);
-}    long countByStatus(String status);
+
+    long countByStatus(String status);
 }

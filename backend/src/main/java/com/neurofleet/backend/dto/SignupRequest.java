@@ -1,12 +1,11 @@
 package com.neurofleet.backend.dto;
 
-import com.neurofleet.backend.model.User;
-
 public class SignupRequest {
+
     private String email;
     private String password;
     private String name;
-    private User.Role role;
+    private String role; // 🔥 STRING (IMPORTANT)
     private String phone;
     private String licenseNumber;
 
@@ -34,11 +33,11 @@ public class SignupRequest {
         this.name = name;
     }
 
-    public User.Role getRole() {
+    public String getRole() {
         return role;
     }
 
-    public void setRole(User.Role role) {
+    public void setRole(String role) {
         this.role = role;
     }
 

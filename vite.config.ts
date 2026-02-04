@@ -2,8 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
-// https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
   server: {
     host: "::",
     port: 8080,
@@ -11,24 +10,22 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
     proxy: {
-      '/api': {
-        target: 'http://localhost:8083',
+      "/api": {
+        target: "http://localhost:8081", // ✅ FIXED PORT
         changeOrigin: true,
         secure: false,
-      }
-    }
+      },
+    },
   },
   plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    // Prevent duplicate React instances
     dedupe: ["react", "react-dom", "react/jsx-runtime"],
   },
   optimizeDeps: {
-    // Force re-bundling of these dependencies
     include: ["react-leaflet", "leaflet", "@react-leaflet/core"],
     force: true,
   },
-}));
+});

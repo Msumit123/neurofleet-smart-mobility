@@ -1,4 +1,6 @@
 com\neurofleet\backend\security\AuthEntryPointJwt.class
+com\neurofleet\backend\dto\DashboardStatsDto.class
+com\neurofleet\backend\repository\VehicleRepository.class
 com\neurofleet\backend\repository\UserRepository.class
 com\neurofleet\backend\security\SecurityConfig.class
 com\neurofleet\backend\security\UserDetailsServiceImpl.class
@@ -6,12 +8,19 @@ com\neurofleet\backend\security\AuthTokenFilter.class
 com\neurofleet\backend\config\DataInitializer.class
 com\neurofleet\backend\security\UserDetailsImpl.class
 com\neurofleet\backend\model\User.class
+com\neurofleet\backend\model\Vehicle.class
 com\neurofleet\backend\BackendApplication.class
+com\neurofleet\backend\controller\BookingController.class
+com\neurofleet\backend\controller\VehicleController.class
 com\neurofleet\backend\dto\SignupRequest.class
 com\neurofleet\backend\dto\JwtResponse.class
 com\neurofleet\backend\security\JwtUtils.class
+com\neurofleet\backend\controller\DashboardController.class
+com\neurofleet\backend\controller\UserController.class
 com\neurofleet\backend\model\User$ApprovalStatus.class
 com\neurofleet\backend\dto\MessageResponse.class
 com\neurofleet\backend\controller\AuthController.class
 com\neurofleet\backend\dto\LoginRequest.class
+com\neurofleet\backend\repository\BookingRepository.class
+com\neurofleet\backend\model\Booking.class
 com\neurofleet\backend\model\User$Role.class
