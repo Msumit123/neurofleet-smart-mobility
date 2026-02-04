@@ -76,6 +76,7 @@ interface LiveFleetMapProps {
   className?: string;
   height?: string;
   updateInterval?: number;
+  centerOn?: [number, number]; // New prop for programmatic centering
 }
 
 // Component to handle map bounds and follow selected vehicle
@@ -83,15 +84,26 @@ function MapController({
   vehicles, 
   selectedVehicleId,
   getInterpolatedPosition,
+  centerOn,
 }: { 
   vehicles: Vehicle[]; 
   selectedVehicleId?: string;
   getInterpolatedPosition: (id: string) => [number, number] | null;
+  centerOn?: [number, number];
 }) {
   const map = useMap();
 
+  // Handle external center commands
+  useEffect(() => {
+    if (centerOn) {
+      map.flyTo(centerOn, 14, { animate: true, duration: 1.5 });
+    }
+  }, [centerOn, map]);
+
   // Fit bounds on initial load
   useEffect(() => {
+    if (centerOn) return; // Don't fit bounds if we are focusing on a specific point
+
     const positions: [number, number][] = [];
     
     vehicles.forEach(v => {
@@ -129,6 +141,7 @@ export default function LiveFleetMap({
   className,
   height = '500px',
   updateInterval = 1000,
+  centerOn,
 }: LiveFleetMapProps) {
   const center: [number, number] = [12.9716, 77.5946]; // Bangalore
 
@@ -165,6 +178,7 @@ export default function LiveFleetMap({
           vehicles={vehicles} 
           selectedVehicleId={selectedVehicleId}
           getInterpolatedPosition={getInterpolatedPosition}
+          centerOn={centerOn}
         />
 
         {/* Animated vehicle markers */}

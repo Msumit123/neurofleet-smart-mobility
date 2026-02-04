@@ -20,16 +20,59 @@ import { useToast } from '@/hooks/use-toast';
 import { getAvailableVehicles, createTrip } from '@/lib/api';
 import { Vehicle } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { LocationSearchInput } from '@/components/ui/location-search-input';
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
   const [pickup, setPickup] = useState('');
   const [destination, setDestination] = useState('');
+  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | undefined>();
+  const [destCoords, setDestCoords] = useState<{ lat: number; lng: number } | undefined>();
+  const [route, setRoute] = useState<[number, number][] | undefined>();
+  const [tripStats, setTripStats] = useState<{ distance: string; duration: string } | null>(null);
+  
   const [isSearching, setIsSearching] = useState(false);
   const [activeBooking, setActiveBooking] = useState<any>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [mapCenter, setMapCenter] = useState<[number, number] | undefined>(undefined);
   const { toast } = useToast();
 
+  useEffect(() => {
+    // Fetch route when both points are set
+    if (pickupCoords && destCoords) {
+      const fetchRoute = async () => {
+        try {
+          const res = await fetch(
+            `http://router.project-osrm.org/route/v1/driving/${pickupCoords.lng},${pickupCoords.lat};${destCoords.lng},${destCoords.lat}?overview=full&geometries=geojson`
+          );
+          const data = await res.json();
+          if (data.routes && data.routes.length > 0) {
+            const routeData = data.routes[0];
+            // OSRM returns [lon, lat], Leaflet needs [lat, lon]
+            const coords = routeData.geometry.coordinates.map((c: number[]) => [c[1], c[0]] as [number, number]);
+            setRoute(coords);
+            
+            // Format distance and duration
+            const distKm = (routeData.distance / 1000).toFixed(1);
+            const durationMins = Math.round(routeData.duration / 60);
+            setTripStats({
+              distance: `${distKm} km`,
+              duration: `${durationMins} mins`
+            });
+          }
+        } catch (e) {
+          console.error("Failed to fetch route", e);
+        }
+      };
+      fetchRoute();
+    } else {
+        setRoute(undefined);
+        setTripStats(null);
+    }
+  }, [pickupCoords, destCoords]);
+
+  // ... (existing useEffect for vehicles) ...
+  
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
@@ -102,30 +145,45 @@ export default function CustomerDashboard() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Pickup Location</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      className="pl-9" 
-                      placeholder="Current Location" 
-                      value={pickup}
-                      onChange={(e) => setPickup(e.target.value)}
-                    />
-                  </div>
+                  <LocationSearchInput
+                    label="Pickup Location"
+                    icon="pin"
+                    value={pickup}
+                    onChange={setPickup}
+                    onSelect={(lat, lng) => {
+                      setPickupCoords({ lat, lng });
+                      setMapCenter([lat, lng]);
+                    }}
+                    placeholder="Current Location"
+                  />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Destination</Label>
-                  <div className="relative">
-                    <Navigation className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      className="pl-9" 
-                      placeholder="Where to?" 
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value)}
-                    />
-                  </div>
+                  <LocationSearchInput
+                    label="Destination"
+                    icon="navigation"
+                    value={destination}
+                    onChange={setDestination}
+                    onSelect={(lat, lng) => {
+                      setDestCoords({ lat, lng });
+                      setMapCenter([lat, lng]);
+                    }}
+                    placeholder="Where to?"
+                  />
                 </div>
+
+                {tripStats && (
+                  <div className="flex items-center justify-between rounded-lg bg-muted p-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span className="font-medium">{tripStats.duration}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Navigation className="h-4 w-4 text-primary" />
+                      <span className="font-medium">{tripStats.distance}</span>
+                    </div>
+                  </div>
+                )}
 
                 {!activeBooking && (
                   <div className="pt-4">
@@ -203,6 +261,9 @@ export default function CustomerDashboard() {
              <LiveFleetMap 
                vehicles={vehicles} 
                height="100%"
+               centerOn={mapCenter}
+               route={route}
+               showRoute={!!route}
              />
           </div>
 
