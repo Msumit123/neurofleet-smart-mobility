@@ -13,13 +13,15 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import StatCard from '@/components/dashboard/StatCard';
-import FleetMap from '@/components/map/FleetMap';
+import LiveFleetMap from '@/components/map/LiveFleetMap';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockVehicles, mockTelemetry, mockDashboardStats, mockPendingDrivers } from '@/data/mockData';
+import { useLiveTelemetry } from '@/hooks/useLiveTelemetry';
+import { mockVehicles, mockDashboardStats, mockPendingDrivers } from '@/data/mockData';
 
 export default function AdminDashboard() {
   const [selectedVehicle, setSelectedVehicle] = useState<string | undefined>();
+  const { telemetry } = useLiveTelemetry({ vehicles: mockVehicles });
 
   const stats = mockDashboardStats;
 
@@ -109,12 +111,12 @@ export default function AdminDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <FleetMap
+              <LiveFleetMap
                 vehicles={mockVehicles}
-                telemetry={mockTelemetry}
                 selectedVehicleId={selectedVehicle}
                 onVehicleSelect={setSelectedVehicle}
                 height="400px"
+                updateInterval={1000}
               />
             </CardContent>
           </Card>
@@ -200,10 +202,10 @@ export default function AdminDashboard() {
                       {vehicle.status.replace('_', ' ')}
                     </Badge>
                   </div>
-                  {mockTelemetry[vehicle.id] && (
+                  {telemetry[vehicle.id] && (
                     <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
-                      <span>Speed: {Math.round(mockTelemetry[vehicle.id].speed)} km/h</span>
-                      <span>Fuel: {Math.round(mockTelemetry[vehicle.id].fuelLevel)}%</span>
+                      <span>Speed: {Math.round(telemetry[vehicle.id].speed)} km/h</span>
+                      <span>Fuel: {Math.round(telemetry[vehicle.id].fuelLevel)}%</span>
                     </div>
                   )}
                 </motion.div>

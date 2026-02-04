@@ -3,16 +3,18 @@ import { motion } from 'framer-motion';
 import { Car, Map, Wrench, AlertTriangle, CheckCircle, Filter } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import StatCard from '@/components/dashboard/StatCard';
-import FleetMap from '@/components/map/FleetMap';
+import LiveFleetMap from '@/components/map/LiveFleetMap';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { mockVehicles, mockTelemetry, mockMaintenanceRecords, mockDashboardStats } from '@/data/mockData';
+import { useLiveTelemetry } from '@/hooks/useLiveTelemetry';
+import { mockVehicles, mockMaintenanceRecords, mockDashboardStats } from '@/data/mockData';
 import { VehicleStatus } from '@/types';
 
 export default function ManagerDashboard() {
   const [selectedVehicle, setSelectedVehicle] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'ALL'>('ALL');
+  const { telemetry } = useLiveTelemetry({ vehicles: mockVehicles });
 
   const filteredVehicles = statusFilter === 'ALL'
     ? mockVehicles
@@ -87,12 +89,12 @@ export default function ManagerDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <FleetMap
+            <LiveFleetMap
               vehicles={filteredVehicles}
-              telemetry={mockTelemetry}
               selectedVehicleId={selectedVehicle}
               onVehicleSelect={setSelectedVehicle}
               height="450px"
+              updateInterval={1000}
             />
           </CardContent>
         </Card>
@@ -108,7 +110,7 @@ export default function ManagerDashboard() {
               {selectedVehicle ? (
                 (() => {
                   const vehicle = mockVehicles.find(v => v.id === selectedVehicle);
-                  const telemetry = mockTelemetry[selectedVehicle];
+                  const vehicleTelemetry = telemetry[selectedVehicle];
                   if (!vehicle) return null;
 
                   return (
@@ -133,27 +135,27 @@ export default function ManagerDashboard() {
                         </Badge>
                       </div>
 
-                      {telemetry && (
+                      {vehicleTelemetry && (
                         <div className="grid grid-cols-2 gap-4">
                           <div className="rounded-lg bg-muted/50 p-3">
                             <p className="text-sm text-muted-foreground">Speed</p>
                             <p className="text-2xl font-bold text-primary">
-                              {Math.round(telemetry.speed)} <span className="text-sm">km/h</span>
+                              {Math.round(vehicleTelemetry.speed)} <span className="text-sm">km/h</span>
                             </p>
                           </div>
                           <div className="rounded-lg bg-muted/50 p-3">
                             <p className="text-sm text-muted-foreground">Fuel Level</p>
                             <p className="text-2xl font-bold text-success">
-                              {Math.round(telemetry.fuelLevel)}<span className="text-sm">%</span>
+                              {Math.round(vehicleTelemetry.fuelLevel)}<span className="text-sm">%</span>
                             </p>
                           </div>
                           <div className="rounded-lg bg-muted/50 p-3">
                             <p className="text-sm text-muted-foreground">Engine</p>
-                            <p className="text-lg font-semibold">{telemetry.engineStatus}</p>
+                            <p className="text-lg font-semibold">{vehicleTelemetry.engineStatus}</p>
                           </div>
                           <div className="rounded-lg bg-muted/50 p-3">
                             <p className="text-sm text-muted-foreground">Heading</p>
-                            <p className="text-lg font-semibold">{Math.round(telemetry.heading)}°</p>
+                            <p className="text-lg font-semibold">{Math.round(vehicleTelemetry.heading)}°</p>
                           </div>
                         </div>
                       )}
