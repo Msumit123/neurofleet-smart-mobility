@@ -20,4 +20,9 @@ export default defineConfig(({ mode }) => ({
     // Prevent duplicate React instances
     dedupe: ["react", "react-dom", "react/jsx-runtime"],
   },
+  optimizeDeps: {
+    // Force re-bundling of these dependencies
+    include: ["react-leaflet", "leaflet", "@react-leaflet/core"],
+    force: true,
+  },
 }));
